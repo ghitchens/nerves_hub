@@ -6,6 +6,15 @@
 #
 # still needs serious elixirification and cleanup, move to maps or HashDict
 
+# If a value at any given path is a proplist (tested as a list whose first
+# term is a tuple, or an empty list).
+#
+# some special keys that can appea
+#
+# mgr@        list of dependents in charge of point in graph
+# wch@        list of dependents to be informed about changes
+#
+
 defmodule Nerves.Hub.OrdDictTree do
 
   @moduledoc false
@@ -108,7 +117,7 @@ defmodule Nerves.Hub.OrdDictTree do
       case :orddict.find(key, dict) do
         {:ok, {_, val}} when val == value ->
           {rc, dict}
-        _ when is_list(value) ->
+        _ when is_list(value) and (length(value) > 0) and is_tuple(hd(value)) ->
           {rcsub, new_dict} = update(atomify(key), value, dict, c)
           {(rc ++ rcsub), new_dict}
         _ ->
@@ -124,9 +133,12 @@ defmodule Nerves.Hub.OrdDictTree do
 
   def update([head|tail], pc, t, c) do
     st = case :orddict.find(head, t) do
-      {:ok, {_seq, l}} when is_list(l) -> l
-      {:ok, _} -> :orddict.new
-      :error -> :orddict.new
+      {:ok, {_seq, l}} when is_list(l) and (length(l) > 0) and is_tuple(hd(l)) -> 
+        l
+      {:ok, _} -> 
+        :orddict.new
+      :error -> 
+        :orddict.new
     end
     {rcsub, stnew} = update(tail, pc, st, c)
     case rcsub do
@@ -160,7 +172,7 @@ defmodule Nerves.Hub.OrdDictTree do
       case {key, val} do
         {:wch@, _} -> val
         {:mgr@, _} -> val
-        {_, l} when is_list(l) ->
+        {_, l} when is_list(l) and (length(l) > 0) and is_tuple(hd(l)) ->
           deltas(since, [], l)
         _ -> val
       end
@@ -170,7 +182,7 @@ defmodule Nerves.Hub.OrdDictTree do
 
   def deltas(since, [h|t], tree) do
     case :orddict.find(h, tree) do
-      {:ok, {_seq, sub_tree}} when is_list(sub_tree) ->
+      {:ok, {_seq, sub_tree}} when is_list(sub_tree) and (length(sub_tree) > 0) and is_tuple(hd(sub_tree)) ->
         deltas(since, t, sub_tree)
       _ -> :error
     end
@@ -180,7 +192,7 @@ defmodule Nerves.Hub.OrdDictTree do
   defp send_notifications([], _, _), do: :pass
   defp send_notifications(changes, tree, context) do
     case :orddict.find(:wch@, tree) do
-      {:ok, subs} when is_list(subs) ->
+      {:ok, subs} when is_list(subs) and (length(subs) > 0) and is_tuple(hd(subs)) ->
         :orddict.map(fn(pid, opts) ->
           send(pid, {:notify, opts, changes, context})
         end, subs)

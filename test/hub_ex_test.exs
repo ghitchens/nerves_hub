@@ -19,10 +19,10 @@ defmodule Nerves.Hub.Test do
     assert new_lock == initial_lock
   end
 
- # test "hub handles arrays" do
- #   result = Hub.update [ "kg7ga", "rig", "kw" ], [ "afgain": [25, 32, "fred"] ], []
- #   assert {:changes, new_ver, [kg7ga: [rig: [kw: [afgain: [25, 32, "fred"]]]]] } = result
- # end
+  test "hub handles arrays for updates" do
+   result = Hub.update [ "kg7ga", "rig", "kw" ], [ "afgain": [25, 32, "fred"] ], []
+   assert {:changes, _new_ver, [kg7ga: [rig: [kw: [afgain: [25, 32, "fred"]]]]] } = result
+  end
 
   test "Hub handles basic update and differencing correctly" do
     test_data = [ basic_key: "yes", another_key: "no", with: 3 ]
