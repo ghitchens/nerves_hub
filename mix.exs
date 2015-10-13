@@ -1,23 +1,23 @@
-defmodule Hub.Mixfile do
+defmodule Nerves.Hub.Mixfile do
 
   use Mix.Project
 
   def project, do: [
-    app: :hub,
+    app: :nerves_hub,
     version: version,
     elixir: "~> 1.0",
-    source_url: "https://github.com/cellulose/hub",
-    homepage_url: "http://cellulose.io",
+    source_url: "https://github.com/nerves-project/hub",
+    homepage_url: "http://nerves-project.org/",
     deps: deps
   ]
 
   def application, do: [
-    mod: { Hub, []}
+    mod: { Nerves.Hub, []}
   ]
 
   defp deps, do: [
     {:earmark, "~> 0.1", only: :dev},
-    {:ex_doc, "~> 0.7", only: :dev}
+    {:ex_doc, "~> 0.8", only: :dev}
   ]
 
   defp version do

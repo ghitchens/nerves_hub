@@ -1,103 +1,72 @@
-defmodule Hub do
+defmodule Nerves.Hub do
+  
   @moduledoc """
-   Central state cache and update broker
+  Implements a heirarchial key-value store with publish/watch semanitcs
+  at each node of the heirarchy. 
+  
+  A specific location on a hub is called a __point__, a term borrowed from
+  SCADA and DCS industrial control systems.  Points are defined by a __path__,
+  which is a list of atoms.  
 
-   Implements a heirarchial key-value store with publish/watch semanitcs
-   at each node of the heirarchy.   Plans to support timestamping,
-   version stamping, real-time playback, security,
+  Processes can publish state at any point on a hub (update), and subscribe to
+  observe state changes at that point (watch). By doing so they will get
+  notified whenever the point or anything below it changes. 
+  
+  Procesesses can also register as handlers for a __requests__ for a point. A
+  process that hanldes requests for a point is called a __manager__.
 
-   The hub holds a collection of dnodes (dictionary nodes).  Each dictionary
-   node is a key/value store, where the keys are atoms, and the values
-   are any erlang term.  Sometimes the value is also a dnode, which results
-   in a heirarchy.
+  Hub keeps a sequence ID for each change to state, and this is stored as part
+  of the state graph, so that the hub can answer the question: "show me all
+  state that has changed since sequence XXX"
 
-   Processes publish state on a hub, watch to state changes,
-   request information about the state of the bus, and request changes
-   to the state.
+  ** Limitations and areas for improvement **
 
-   A hub is a process (a gen_server, actually) that holds state for the
-   system, manages changes to state, and and routes notifications of
-   changes of state.
+  Right now the store is only in memory, so a restart removes all data
+  from the store.   All persistence must be implemented separately
 
-   The hub keeps a sequence ID for each change to state, and this is
-   stored as part of the state graph, so that the hub can answer the
-   question:  "show me all state that has changed since sequence XXX"
+  There is currently no change history or playback history feature.
 
-   ** Limitations and areas for improvement **
+  ## Examples
 
-   Right now the store is only in memory, so a restart removes all data
-   from the store.   All persistence must be implemented separately
+  Basic Usage:
 
-   There is currently no change history or playback history feature.
+     # Start the Hub GenServer
+     iex> Hub.start
+     {:ok, #PID<0.127.0>}
+     # Put [status: :online] at path [:some, :point]
+     iex(2)> Hub.put [:some,:point], [status: :online]
+     {:changes, {"05142ef7fe86a86D2471CA6869E19648", 1},
+     [some: [point: [status: :online]]]}
+     # Fetch all values at path [:some, :point]
+     Hub.fetch [:some, :point]
+     {{"05142ef7fe86a86D2471CA6869E19648", 1}, [status: :online]}
+     # Get particular value :status at [:some, :point]
+     Hub.get [:some, :point], :status
+     :online
+"""
 
-   [{key,val},{key,val}...]
-
-   if a value at any given path is a proplist (tested as a list whose first
-   term is a tuple, or an empty list).
-
-   some special keys that can appea
-
-    mgr@        list of dependents in charge of point in graph
-    wch@        list of dependents to be informed about changes
-
-   For convenience, you can pass in keys as atoms, but they will be converted
-   to binary keys internally (all keys are stored as binaries).    They will
-   be represented as binary keys when returned.  This behavior is under review
-   so if you want to be sure, pass binary keys to begin with.
-
-   ## Examples
-
-   Basic Usage:
-
-       # Start the Hub GenServer
-       iex> Hub.start
-       {:ok, #PID<0.127.0>}
-       # Put [status: :online] at path [:some, :point]
-       iex(2)> Hub.put [:some,:point], [status: :online]
-       {:changes, {"05142ef7fe86a86D2471CA6869E19648", 1},
-       [some: [point: [status: :online]]]}
-       # Fetch all values at path [:some, :point]
-       Hub.fetch [:some, :point]
-       {{"05142ef7fe86a86D2471CA6869E19648", 1}, [status: :online]}
-       # Get particular value :status at [:some, :point]
-       Hub.get [:some, :point], :status
-       :online
-  """
-
-  require Logger
-  require Record
-
-  use GenServer
-
-  defmodule State do
-    @moduledoc false
-    @derive [Access]
-    defstruct gtseq: 0, vlock: Uuid.generate, dtree: :orddict.new
-  end
-
+  import Nerves.Hub.Helpers
+  alias Nerves.Hub.Server
+  
   @proc_path_key {:agent, :path}
 
-  @doc false
   def start() do
     start([],[])
   end
 
-  @doc false
   def start_link() do
     start_link([], [])
   end
 
   @doc "Start the Hub GenServer"
   def start(_,_) do
-    GenServer.start(__MODULE__, [], name: __MODULE__)
+    GenServer.start(Server, [], name: Server)
   end
 
   @doc "Start the Hub GenServer with link to calling process"
   def start_link(_,_) do
-    GenServer.start(__MODULE__, [], name: __MODULE__)
+    GenServer.start(Server, [], name: Server)
   end
-
-  ############################### PUBLIC API ###################################
 
   @doc """
   Request a change to the path in the hub. The Manager is forwarded the request
@@ -114,7 +83,8 @@ defmodule Hub do
   """
   def request(path, request, context \\ []) do
     atomic_path = atomify(path)
-    {:ok, {manager_pid, _opts}} = GenServer.call(__MODULE__, {:manager, atomic_path})
+    {:ok, {manager_pid, _opts}} = GenServer.call(Server, 
+      {:manager, atomic_path})
     GenServer.call(manager_pid, {:request, atomic_path, request, context})
   end
 
@@ -129,7 +99,7 @@ defmodule Hub do
   ```
   """
   def update(path, changes, context \\ []) do
-    GenServer.call(__MODULE__, {:update, atomify(path), changes, context})
+    GenServer.call(Server, {:update, atomify(path), changes, context})
   end
 
   @doc """
@@ -172,7 +142,7 @@ defmodule Hub do
   ```
   """
   def manage(path, options \\ []) do
-    GenServer.call(__MODULE__, {:manage, atomify(path), options})
+    GenServer.call(Server, {:manage, atomify(path), options})
   end
 
   @doc """
@@ -186,7 +156,7 @@ defmodule Hub do
   ```
   """
   def manager(path) do
-    GenServer.call(__MODULE__, {:manager, atomify(path)})
+    GenServer.call(Server, {:manager, atomify(path)})
   end
 
   @doc """
@@ -216,7 +186,7 @@ defmodule Hub do
   ```
   """
   def watch(path, options \\ []) do
-    GenServer.call(__MODULE__, {:watch, atomify(path), options})
+    GenServer.call(Server, {:watch, atomify(path), options})
   end
 
   @doc """
@@ -230,7 +200,7 @@ defmodule Hub do
   ```
   """
   def unwatch(path) do
-    GenServer.call(__MODULE__, {:unwatch, atomify(path)})
+    GenServer.call(Server, {:unwatch, atomify(path)})
   end
 
   @doc """
@@ -244,7 +214,7 @@ defmodule Hub do
   ```
   """
   def dump(path \\ []) do
-    GenServer.call(__MODULE__, {:dump, atomify(path)})
+    GenServer.call(Server, {:dump, atomify(path)})
   end
 
   @doc """
@@ -289,298 +259,7 @@ defmodule Hub do
   ```
   """
   def deltas(seq, path \\ []) do
-    GenServer.call(__MODULE__, {:deltas, seq, atomify(path)})
+    GenServer.call(Server, {:deltas, seq, atomify(path)})
   end
 
-  ########################## GenServer Callbacks ###############################
-  @doc false
-  def init(_args), do: {:ok, %State{}}
-
-  @doc false
-  def terminate(:normal, _state), do: :ok
-  def terminate(reason, _state), do: reason
-
-  @doc false
-  def code_change(_old_ver, state, _extra), do: {:ok, state}
-
-  @doc false
-  def handle_info(msg, state) do
-    Logger.debug "#{__MODULE__} got unexpected message: #{inspect msg}"
-    {:noreply, state}
-  end
-
-  @doc false
-  def handle_cast(:return, state), do: {:noreply, state}
-
-  ############################## handle_call ###################################
-
-  @doc false
-  def handle_call(:terminate, _from, state) do
-    {:stop, :normal, :ok, state}
-  end
-
-  @doc false
-  def handle_call({:manage, path, opts}, from, state) do
-    case do_manage(path, {from, opts}, state.dtree) do
-      tnew when is_list(tnew) ->
-        {:reply, :ok, %State{state | dtree: tnew}}
-      _ ->
-        {:reply, :error, state}
-    end
-  end
-
-  @doc false
-  def handle_call({:manager, path}, _from, state) do
-    {:reply, do_manager(path, state.dtree), state}
-  end
-
-  @doc false
-  def handle_call({:watch, path, opts}, from, state) do
-    case do_watch(path, {from, opts}, state.dtree) do
-      {:ok, tnew} when is_list(tnew) ->
-        {:reply, :ok, %State{state | dtree: tnew}}
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  @doc false
-  def handle_call({:unwatch, path}, from, state) do
-    case do_unwatch(path, from, state.dtree) do
-      {:ok, tnew} when is_list(tnew) ->
-        {:reply, :ok, %State{state | dtree: tnew}}
-      {:error, reason} ->
-        {:reply, {:error, reason}, state}
-    end
-  end
-
-  @doc false
-  def handle_call({:request, _key, _req}, _from, state) do
-    {:reply, :ok, state}
-  end
-
-  @doc false
-  def handle_call({:update, path, proposed, auth}, from, state) do
-    seq = state.gtseq + 1
-    ctx = {seq, [from: from, auth: auth]} #REVIEW .erl 233
-    case do_update(path, proposed, state.dtree, ctx) do
-      {[], _} ->
-        {:reply, {:nochanges, {state.vlock, state.gtseq}, []}, state}
-      {changed, new_tree} ->
-        state = %State{state | dtree: new_tree, gtseq: seq}
-        {:reply, {:changes, {state.vlock, seq}, changed}, state}
-    end
-  end
-
-  @doc false
-  def handle_call({:dump, path}, _from, state) do
-    {:reply, {{state.vlock, state.gtseq}, do_dump(path, state.dtree)},state}
-  end
-
-  @doc false
-  def handle_call({:deltas, seq, path}, _from, state) do
-    {:reply, {{state.vlock, state.gtseq}, handle_vlocked_deltas(seq, path, state)}, state}
-  end
-
-  # Breaks apart the vlock information and calls do_deltas with the version
-  # found or since the start (version 0)
-  defp handle_vlocked_deltas({cur_vlock, since}, path, state) do
-    case state.vlock do
-      vlock when vlock == cur_vlock -> do_deltas(since, path, state.dtree)
-      _ -> do_deltas(0, path, state.dtree)
-    end
-  end
-
-  ####################### state tree implementation ############################
-
-  ## manage ownership of this point
-  ##
-  ## TODO: un-manage?  handle errors if already manageed?   Security?
-
-  defp do_manage([], {{from_pid, _ref}, opts}, tree) do
-    :orddict.store(:mgr@, {from_pid, opts}, tree)
-  end
-
-  defp do_manage([h|t], {from, opts}, tree) do
-    {:ok, {seq, st}} = :orddict.find(h, tree)
-    stnew = do_manage(t, {from, opts}, st)
-    :orddict.store(h, {seq, stnew}, tree)
-  end
-
-  ## do_manager(Point, Tree) -> {ok, {Process, Options}} | undefined
-  ##
-  ## return the manageling process and options for a given point on the
-  ## dictionary tree, if the manager was set by do_manage(...).
-
-  defp do_manager([], tree), do: :orddict.find(:mgr@, tree)
-
-  defp do_manager([h|t], tree) do
-    {:ok, {_seq, sub_tree}} = :orddict.find(h, tree)
-    do_manager(t, sub_tree)
-  end
-
-  ## do_watch(Path, Subscription, Tree)
-  ##
-  ## Subscription is a {From, watchParameters} tuple that is placed on
-  ## the wch@ key at a node in the dtree.  Adding a subscription doesn't
-  ## currently cause any notificaitions, although that might change.
-  ##
-  ## REVIEW: could eventually be implemented as a special form of update by
-  ## passing something like {append, Subscription, [notifications, false]}
-  ## as the value, or maybe something like a function as the value!!! cool?
-
-  defp do_watch([], {from, opts}, tree) do
-    {from_pid, _ref} = from
-    subs = case :orddict.find(:wch@, tree) do
-      {:ok, l} when is_list(l) ->
-        :orddict.store(from_pid, opts, l)
-      _ ->
-        :orddict.store(from_pid, opts, :orddict.new())
-    end
-    {:ok, :orddict.store(:wch@, subs, tree)}
-  end
-
-  defp do_watch([h|t], {from, opts}, tree) do
-    case :orddict.find(h, tree) do
-      {:ok, {seq, st}} ->
-        case do_watch(t, {from, opts}, st) do
-          {:ok, stnew} ->
-            {:ok, :orddict.store(h, {seq, stnew}, tree)}
-          {:error, reason} -> {:error, reason}
-        end
-      _ -> {:error, :nopoint}
-    end
-  end
-
-  ## do_unwatch(Path, releaser, Tree) -> Tree | notfound
-  ##
-  ## removes releaser from the dictionary tree
-  defp do_unwatch([], unsub, tree) do
-    {from_pid, _ref} = unsub
-    case :orddict.find(:wch@, tree) do
-      {:ok, old_subs} ->
-        {:ok, :orddict.store(:wch@, :orddict.erase(from_pid, old_subs), tree)}
-      _ -> {:error, :no_wch}
-    end
-  end
-
-  defp do_unwatch([h|t], unsub, tree) do
-    case :orddict.find(h, tree) do
-      {:ok, {seq, st}} ->
-        case do_unwatch(t, unsub, st) do
-          {:ok, stnew} ->
-            {:ok, :orddict.store(h, {seq, stnew}, tree)}
-          {:error, reason} -> {:error, reason}
-        end
-      _ -> {:error, :nopoint}
-    end
-  end
-
-  ## update(PathList,ProposedChanges,Tree,Context) -> {ResultingChanges,NewTree}
-  ##
-  ## Coding Abbreviations:
-  ##
-  ## PC,RC    Proposed Changes, Resulting Changes (these are trees)
-  ## P,PH,PT  Path/Path Head/ Path Tail
-  ## T,ST     Tree,SubTree
-  ## C        Context - of the form {Seq, Whatever} where whatever is
-  ##          any erlang term - gets threaded unmodified through update
-  defp do_update([], pc, t, c) do
-    uf = fn(key, value, {rc, dict}) ->
-      case :orddict.find(key, dict) do
-        {:ok, {_, val}} when val == value ->
-          {rc, dict}
-        _ when is_list(value) ->
-          {rcsub, new_dict} = do_update(atomify(key), value, dict, c)
-          {(rc ++ rcsub), new_dict}
-        _ ->
-          {seq, _} = c
-          {rc ++ [{key, value}], :orddict.store(atomify(key), {seq, value}, dict)}
-      end
-    end
-    {cl, tnew} = :orddict.fold(uf, {[], t}, pc)
-    send_notifications(cl, tnew, c)
-    {cl, tnew}
-  end
-
-  defp do_update([head|tail], pc, t, c) do
-    st = case :orddict.find(head, t) do
-      {:ok, {_seq, l}} when is_list(l) -> l
-      {:ok, _} -> :orddict.new
-      :error -> :orddict.new
-    end
-    {rcsub, stnew} = do_update(tail, pc, st, c)
-    case rcsub do
-      [] -> {[], t}
-      y ->
-        rc = [{head, y}]
-        {seq, _} = c
-        t = :orddict.store(head, {seq, stnew}, t)
-        send_notifications(rc, t, c)
-        {rc, t}
-    end
-  end
-
-  defp do_dump([], tree), do: tree
-
-  defp do_dump([h|t], tree) do
-    {:ok, {_seq, sub_tree}} = :orddict.find(h, tree)
-    do_dump(t, sub_tree)
-  end
-
-  defp do_deltas(since, [], tree) do
-    fn_filter = fn(key, val) ->
-      case {key, val} do
-        {:wch@, _} -> false
-        {:mgr@, _} -> false
-        {_key, {seq, _val}} -> (seq > since)
-        _ -> true
-      end
-    end
-    fn_recurse = fn(key, {_seq, val}) ->
-      case {key, val} do
-        {:wch@, _} -> val
-        {:mgr@, _} -> val
-        {_, l} when is_list(l) ->
-          do_deltas(since, [], l)
-        _ -> val
-      end
-    end
-    :orddict.map(fn_recurse, :orddict.filter(fn_filter, tree))
-  end
-
-  defp do_deltas(since, [h|t], tree) do
-    case :orddict.find(h, tree) do
-      {:ok, {_seq, sub_tree}} when is_list(sub_tree) ->
-        do_deltas(since, t, sub_tree)
-      _ -> :error
-    end
-  end
-
-  # Send notification to all watchers who called `watch/1`
-  defp send_notifications([], _, _), do: :pass
-  defp send_notifications(changes, tree, context) do
-    case :orddict.find(:wch@, tree) do
-      {:ok, subs} when is_list(subs) ->
-        :orddict.map(fn(pid, opts) ->
-          send(pid, {:notify, opts, changes, context})
-        end, subs)
-      _ -> :pass
-    end
-  end
-
-  # Converts a point (path) to a url
-  def pt_to_url(pt) do
-    "/" <> Enum.map_join(pt, "/", &(Atom.to_string(&1)))
-  end
-  #
-  # # converts an atom (or list of atoms) to binaries
-  # defp binarify([h|t]), do: [binarify(h) | binarify(t)]
-  # defp binarify(a) when is_atom(a), do: Atom.to_string(a)
-  # defp binarify(o), do: o
-
-  # converts a binary (or list of binaries) to atoms
-  defp atomify([h|t]), do: [atomify(h) | atomify(t)]
-  defp atomify(s) when is_binary(s), do: String.to_atom(s)
-  defp atomify(o), do: o
 end
