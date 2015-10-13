@@ -192,7 +192,7 @@ defmodule Nerves.Hub.OrdDictTree do
   defp send_notifications([], _, _), do: :pass
   defp send_notifications(changes, tree, context) do
     case :orddict.find(:wch@, tree) do
-      {:ok, subs} when is_list(subs) and (length(subs) > 0) and is_tuple(hd(subs)) ->
+      {:ok, subs} when is_list(subs) ->
         :orddict.map(fn(pid, opts) ->
           send(pid, {:notify, opts, changes, context})
         end, subs)
