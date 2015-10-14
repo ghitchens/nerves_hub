@@ -19,11 +19,27 @@ defmodule Nerves.Hub.Test do
     assert new_lock == initial_lock
   end
 
-  test "hub handles arrays for updates" do
-   result = Hub.update [ "kg7ga", "rig", "kw" ], [ "afgain": [25, 32, "fred"] ], []
-   assert {:changes, _new_ver, [kg7ga: [rig: [kw: [afgain: [25, 32, "fred"]]]]] } = result
+  test "hub handles setting and getting arrays" do
+    changes ["a", "b", "c"], int_array: [2, 3, 5], array_of_arrays: [[2],[3,4],[5,6,7]]
+    changes ["d", "e", "f"], empty_array: [], array_of_strings: ["23252", "2521"]
+    changes ["a", "b", "c"], int_array: [2, 1, 5], array_of_arrays: [[2],[3,8],[5,6,7]]
+    nochanges ["a", "b", "c"], int_array: [2, 1, 5], array_of_arrays: [[2],[3,8],[5,6,7]]
+    changes ["a", "b", "c"], int_array: [2, 3, 5], array_of_arrays: [[2],[3,4],[5,6,7]]
+    nochanges ["a", "b", "c"], int_array: [2, 3, 5], array_of_arrays: [[2],[3,4],[5,6,7]]
+    nochanges ["d", "e", "f"], empty_array: [], array_of_strings: ["23252", "2521"]
   end
 
+  test "hub handles setting and getting strings" do
+    changes ["a", "b", "c"], basic_string: "hello world", weird_string: """
+    This is a long string\302
+    with weird characters \n and \205
+    """
+    changes ["a", "b", "c"], basic_string: "foo", weird_string: """
+    another strange one
+    """
+  end
+
+  
   test "Hub handles basic update and differencing correctly" do
     test_data = [ basic_key: "yes", another_key: "no", with: 3 ]
     test_rootkey = :nemo_temp_tests
@@ -63,4 +79,19 @@ defmodule Nerves.Hub.Test do
     assert resp_changes == []
 
   end
+  
+  def changes(path, values) do
+    {_, expected_changes} = path
+      |> Enum.reverse
+      |> Enum.map_reduce values, fn(x, acc) -> 
+        {x, [{:erlang.binary_to_atom(x, :utf8), acc}]} 
+      end
+    assert {:changes, _new_ver, ^expected_changes} = Hub.update path, values
+  end
+
+  def nochanges(path, values) do
+    assert {:nochanges, _new_ver, []} = Hub.update path, values
+  end
+
+
 end
