@@ -29,11 +29,16 @@ defmodule Nerves.Hub.OrdDictTree do
     :orddict.store(:mgr@, {from_pid, opts}, tree)
   end
 
-	def manage([h|t], {from, opts}, tree) do
-    {:ok, {seq, st}} = :orddict.find(h, tree)
-    stnew = manage(t, {from, opts}, st)
-    :orddict.store(h, {seq, stnew}, tree)
+  def manage([h|t], {from, opts}, tree) do
+    case :orddict.find(h, tree) do
+      :error -> nil
+      {:ok, {seq, st}} ->
+        stnew = manage(t, {from, opts}, st)
+        :orddict.store(h, {seq, stnew}, tree)
+    end
   end
+
+  def manage(point, f, tree), do: manage([point], f, tree)
 
   ## manager(Point, Tree) -> {ok, {Process, Options}} | undefined
   ##
@@ -42,9 +47,13 @@ defmodule Nerves.Hub.OrdDictTree do
   def manager([], tree), do: :orddict.find(:mgr@, tree)
 
   def manager([h|t], tree) do
-    {:ok, {_seq, sub_tree}} = :orddict.find(h, tree)
-    manager(t, sub_tree)
+    case :orddict.find(h, tree) do
+      :error -> nil
+      {:ok, {_seq, sub_tree}} -> manager(t, sub_tree)
+    end
   end
+
+  def manager(point, tree), do: manager([point], tree) 
  
   ## watch(Path, Subscription, Tree)
   ##
@@ -113,12 +122,13 @@ defmodule Nerves.Hub.OrdDictTree do
   ## C        Context - of the form {Seq, Whatever} where whatever is
   ##          any erlang term - gets threaded unmodified through update
   def update([], pc, t, c) do
+    if is_map(pc), do: pc = Dict.to_list(pc)
     uf = fn(key, value, {rc, dict}) ->
       case :orddict.find(key, dict) do
         {:ok, {_, val}} when val == value ->
           {rc, dict}
-        _ when is_list(value) and (length(value) > 0) and is_tuple(hd(value)) ->
-          {rcsub, new_dict} = update(atomify(key), value, dict, c)
+        _ when is_list(value) ->
+          {rcsub, new_dict} = update(atomify([key]), value, dict, c)
           {(rc ++ rcsub), new_dict}
         _ ->
           {seq, _} = c

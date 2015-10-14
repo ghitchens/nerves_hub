@@ -60,12 +60,22 @@ defmodule Nerves.Hub do
 
   @doc "Start the Hub GenServer"
   def start(_,_) do
-    GenServer.start(Server, [], name: Server)
+    case GenServer.start(Server, [], name: Server) do
+      {:error, {:already_started, pid}} ->
+        {:ok, pid}
+      ret ->
+        ret
+    end
   end
 
   @doc "Start the Hub GenServer with link to calling process"
   def start_link(_,_) do
-    GenServer.start(Server, [], name: Server)
+    case GenServer.start_link(Server, [], name: Server) do
+      {:error, {:already_started, pid}} ->
+        {:ok, pid}
+      ret ->
+        ret
+    end
   end
 
   @doc """
