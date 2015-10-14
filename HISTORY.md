@@ -2,6 +2,8 @@
 
 - Renamed project to Nerves.Hub during merge to Nerves
 - cleanup of HISTORY.md (this file)
+- added better tests
+- refactored for nerves
 
 # 2015-09-15 0.9.0
 
