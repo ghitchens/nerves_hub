@@ -127,7 +127,7 @@ defmodule Nerves.Hub.OrdDictTree do
       case :orddict.find(key, dict) do
         {:ok, {_, val}} when val == value ->
           {rc, dict}
-        _ when is_list(value) ->
+        _ when is_list(value) and (length(value) > 0) and is_tuple(hd(value)) -> 
           {rcsub, new_dict} = update(atomify([key]), value, dict, c)
           {(rc ++ rcsub), new_dict}
         _ ->
