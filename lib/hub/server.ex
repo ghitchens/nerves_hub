@@ -8,7 +8,6 @@ defmodule Nerves.Hub.Server do
   alias Nerves.Hub.OrdDictTree, as: Tree  # for now
   
   defmodule State do
-    @derive [Access]
     defstruct gtseq: 0, vlock: Nerves.Hub.UUID.generate, dtree: Tree.new
   end
   
