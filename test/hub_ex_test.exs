@@ -2,7 +2,7 @@ defmodule Nerves.Hub.Test do
 
   use ExUnit.Case
   alias Nerves.Hub
-	
+
   Hub.start
 
   test "hub is running and sorta works" do
@@ -39,7 +39,7 @@ defmodule Nerves.Hub.Test do
     """
   end
 
-  
+
   test "Hub handles basic update and differencing correctly" do
     test_data = [ basic_key: "yes", another_key: "no", with: 3 ]
     test_rootkey = :nemo_temp_tests
@@ -79,12 +79,12 @@ defmodule Nerves.Hub.Test do
     assert resp_changes == []
 
   end
-  
+
   def changes(path, values) do
     {_, expected_changes} = path
       |> Enum.reverse
-      |> Enum.map_reduce values, fn(x, acc) -> 
-        {x, [{:erlang.binary_to_atom(x, :utf8), acc}]} 
+      |> Enum.map_reduce values, fn(x, acc) ->
+        {x, [{:erlang.binary_to_atom(x, :utf8), acc}]}
       end
     assert {:changes, _new_ver, ^expected_changes} = Hub.update path, values
   end

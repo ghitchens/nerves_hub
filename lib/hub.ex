@@ -1,17 +1,17 @@
 defmodule Nerves.Hub do
-  
+
   @moduledoc """
   Implements a heirarchial key-value store with publish/watch semanitcs
-  at each node of the heirarchy. 
-  
+  at each node of the heirarchy.
+
   A specific location on a hub is called a __point__, a term borrowed from
   SCADA and DCS industrial control systems.  Points are defined by a __path__,
-  which is a list of atoms.  
+  which is a list of atoms.
 
   Processes can publish state at any point on a hub (update), and subscribe to
   observe state changes at that point (watch). By doing so they will get
-  notified whenever the point or anything below it changes. 
-  
+  notified whenever the point or anything below it changes.
+
   Procesesses can also register as handlers for a __requests__ for a point. A
   process that hanldes requests for a point is called a __manager__.
 
@@ -47,7 +47,7 @@ defmodule Nerves.Hub do
 
   import Nerves.Hub.Helpers
   alias Nerves.Hub.Server
-  
+
   @proc_path_key {:agent, :path}
 
   def start() do
@@ -93,7 +93,7 @@ defmodule Nerves.Hub do
   """
   def request(path, request, context \\ []) do
     atomic_path = atomify(path)
-    {:ok, {manager_pid, _opts}} = GenServer.call(Server, 
+    {:ok, {manager_pid, _opts}} = GenServer.call(Server,
       {:manager, atomic_path})
     GenServer.call(manager_pid, {:request, atomic_path, request, context})
   end
