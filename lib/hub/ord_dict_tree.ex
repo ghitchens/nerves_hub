@@ -1,5 +1,5 @@
 # this module based on original hub.erl by ghitchens circa 2012
-# 
+#
 # ghitchens wrote initial erlang version as hub.erl
 # captchrisd ported to elixir hub.ex
 # ghitchens refactored from hub.ex
@@ -53,8 +53,8 @@ defmodule Nerves.Hub.OrdDictTree do
     end
   end
 
-  def manager(point, tree), do: manager([point], tree) 
- 
+  def manager(point, tree), do: manager([point], tree)
+
   ## watch(Path, Subscription, Tree)
   ##
   ## Subscription is a {From, watchParameters} tuple that is placed on
@@ -127,13 +127,13 @@ defmodule Nerves.Hub.OrdDictTree do
       case :orddict.find(key, dict) do
         {:ok, {_, val}} when val == value ->
           {rc, dict}
-        _ when is_list(value) and (length(value) > 0) and is_tuple(hd(value)) -> 
+        _ when is_list(value) and (length(value) > 0) and is_tuple(hd(value)) ->
           {rcsub, new_dict} = update(atomify([key]), value, dict, c)
           {(rc ++ rcsub), new_dict}
         _ ->
           {seq, _} = c
           {rc ++ [{key, value}], :orddict.store(atomify(key),
-																								{seq, value}, dict)}
+                                                {seq, value}, dict)}
       end
     end
     {cl, tnew} = :orddict.fold(uf, {[], t}, pc)
@@ -143,11 +143,11 @@ defmodule Nerves.Hub.OrdDictTree do
 
   def update([head|tail], pc, t, c) do
     st = case :orddict.find(head, t) do
-      {:ok, {_seq, l}} when is_list(l) and (length(l) > 0) and is_tuple(hd(l)) -> 
+      {:ok, {_seq, l}} when is_list(l) and (length(l) > 0) and is_tuple(hd(l)) ->
         l
-      {:ok, _} -> 
+      {:ok, _} ->
         :orddict.new
-      :error -> 
+      :error ->
         :orddict.new
     end
     {rcsub, stnew} = update(tail, pc, st, c)
