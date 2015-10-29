@@ -1,6 +1,7 @@
 defmodule Nerves.Hub.Test do
+  use ExUnit.Case, async: true
+  #doctest Nerves.Hub
 
-  use ExUnit.Case
   alias Nerves.Hub
 
   Hub.start
@@ -39,7 +40,6 @@ defmodule Nerves.Hub.Test do
     """
   end
 
-
   test "Hub handles basic update and differencing correctly" do
     test_data = [ basic_key: "yes", another_key: "no", with: 3 ]
     test_rootkey = :nemo_temp_tests
@@ -77,7 +77,6 @@ defmodule Nerves.Hub.Test do
     assert resp_seq2 == new_seq + 1
     assert resp_lock2 == initial_lock
     assert resp_changes == []
-
   end
 
   def changes(path, values) do
@@ -92,6 +91,4 @@ defmodule Nerves.Hub.Test do
   def nochanges(path, values) do
     assert {:nochanges, _new_ver, []} = Hub.update path, values
   end
-
-
 end
