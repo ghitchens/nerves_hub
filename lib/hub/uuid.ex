@@ -2,7 +2,7 @@
 # should definitely become a utility funciton in nerves_utils or something
 
 defmodule Nerves.Hub.UUID do
-  
+
   @moduledoc false
 
   @doc """
@@ -39,5 +39,5 @@ defmodule Nerves.Hub.UUID do
     do: lower(t, acc <> <<h>>)
   defp lower(<<>>, acc),
     do: acc
-    
+
 end
