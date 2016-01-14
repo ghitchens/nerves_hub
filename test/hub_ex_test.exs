@@ -36,6 +36,11 @@ defmodule Nerves.Hub.Test do
     nochanges ["d", "e", "f"], empty_array: [], array_of_strings: ["23252", "2521"]
   end
 
+  test "hub manages setting values to nil sets properly" do
+    changes ["q", "r", "s"], nil_test_key: "this is a string"
+    changes ["q", "r", "s"], nil_test_key: nil
+  end
+
   test "hub handles setting and getting strings" do
     changes ["a", "b", "c"], basic_string: "hello world", weird_string: """
     This is a long string\302
