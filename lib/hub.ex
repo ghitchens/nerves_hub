@@ -93,8 +93,7 @@ defmodule Nerves.Hub do
   """
   def request(path, request, context \\ []) do
     atomic_path = atomify(path)
-    {:ok, {manager_pid, _opts}} = GenServer.call(Server, 
-      {:manager, atomic_path})
+    {:ok, {manager_pid, _opts}} = manager(atomic_path)
     GenServer.call(manager_pid, {:request, atomic_path, request, context})
   end
 
