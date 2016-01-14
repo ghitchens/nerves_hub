@@ -1,7 +1,10 @@
-# 2015-09-30 0.10.0-pre
+# 2016-01-03 0.10.0-pre
 
+- IO.write inspect(Hub.fetch ["q", "r", "s"])
 - Renamed project to Nerves.Hub during merge to Nerves
 - cleanup of HISTORY.md (this file)
+- added better tests
+- refactored for nerves
 
 # 2015-09-15 0.9.0
 

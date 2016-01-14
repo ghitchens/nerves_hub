@@ -1,17 +1,16 @@
 defmodule Nerves.Hub.Server do
-  
+
   use GenServer
-  
+
   require Logger
   require Record
 
   alias Nerves.Hub.OrdDictTree, as: Tree  # for now
-  
+
   defmodule State do
-    @derive [Access]
     defstruct gtseq: 0, vlock: Nerves.Hub.UUID.generate, dtree: Tree.new
   end
-  
+
   def init(_args), do: {:ok, %State{}}
 
   def terminate(:normal, _state), do: :ok
@@ -99,5 +98,5 @@ defmodule Nerves.Hub.Server do
       _ -> Tree.deltas(0, path, state.dtree)
     end
   end
-    
+
 end
