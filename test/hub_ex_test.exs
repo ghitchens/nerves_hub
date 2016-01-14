@@ -20,6 +20,12 @@ defmodule Nerves.Hub.Test do
     assert new_lock == initial_lock
   end
 
+  test "hub handles map arguments properly" do
+    result = Hub.update ["foo"], %{this: %{is_a: "map"}}
+    assert {:changes, _, [foo: [this: [is_a: "map"]]]} = result
+  end
+
+
   test "hub handles setting and getting arrays" do
     changes ["a", "b", "c"], int_array: [2, 3, 5], array_of_arrays: [[2],[3,4],[5,6,7]]
     changes ["d", "e", "f"], empty_array: [], array_of_strings: ["23252", "2521"]

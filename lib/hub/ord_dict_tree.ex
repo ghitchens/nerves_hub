@@ -121,8 +121,8 @@ defmodule Nerves.Hub.OrdDictTree do
   ## T,ST     Tree,SubTree
   ## C        Context - of the form {Seq, Whatever} where whatever is
   ##          any erlang term - gets threaded unmodified through update
+
   def update([], pc, t, c) do
-    if is_map(pc), do: pc = Dict.to_list(pc)
     uf = fn(key, value, {rc, dict}) ->
       case :orddict.find(key, dict) do
         {:ok, {_, val}} when val == value ->
@@ -136,7 +136,7 @@ defmodule Nerves.Hub.OrdDictTree do
                                                 {seq, value}, dict)}
       end
     end
-    {cl, tnew} = :orddict.fold(uf, {[], t}, pc)
+    {cl, tnew} = :orddict.fold(uf, {[], t}, demapify(pc))
     send_notifications(cl, tnew, c)
     {cl, tnew}
   end
