@@ -11,6 +11,13 @@ defmodule Nerves.Hub.UUID do
   def generate do
     bingenerate() |> encode
   end
+  
+  @doc """
+  Generates a base 64 encoded UUID without padding
+  """
+  def b64generate do
+    bingenerate() |> Base.encode64()
+  end
 
   @doc """
   Generates a version 4 (random) UUID in the binary format.
