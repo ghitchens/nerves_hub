@@ -25,6 +25,8 @@ defmodule Nerves.Hub.OrdDictTree do
   ## manage ownership of this point
   ##
   ## TODO: un-manage?  handle errors if already manageed?   Security?
+  def manage(point \\ [], opts \\ {}, tree \\ :orddict.new)
+
   def manage([], {{from_pid, _ref}, opts}, tree) do
     :orddict.store(:mgr@, {from_pid, opts}, tree)
   end
@@ -44,6 +46,8 @@ defmodule Nerves.Hub.OrdDictTree do
   ##
   ## return the manageling process and options for a given point on the
   ## dictionary tree, if the manager was set by manage(...).
+  def manager(_, nil), do: nil
+
   def manager([], tree), do: :orddict.find(:mgr@, tree)
 
   def manager([h|t], tree) do
@@ -64,6 +68,7 @@ defmodule Nerves.Hub.OrdDictTree do
   ## REVIEW: could eventually be implemented as a special form of update by
   ## passing something like {append, Subscription, [notifications, false]}
   ## as the value, or maybe something like a function as the value!!! cool?
+  def watch(point \\ [], opts \\ {}, tree \\ :ordict.new)
 
   def watch([], {from, opts}, tree) do
     {from_pid, _ref} = from
@@ -121,6 +126,7 @@ defmodule Nerves.Hub.OrdDictTree do
   ## T,ST     Tree,SubTree
   ## C        Context - of the form {Seq, Whatever} where whatever is
   ##          any erlang term - gets threaded unmodified through update
+  def update(point, nil, t, c), do: update(point, [], t, c)
 
   def update([], pc, t, c) do
     uf = fn(key, value, {rc, dict}) ->
