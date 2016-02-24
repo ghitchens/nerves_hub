@@ -2,7 +2,7 @@
 # should definitely become a utility funciton in nerves_utils or something
 
 defmodule Nerves.Hub.UUID do
-  
+
   @moduledoc false
 
   @doc """
@@ -10,6 +10,13 @@ defmodule Nerves.Hub.UUID do
   """
   def generate do
     bingenerate() |> encode
+  end
+  
+  @doc """
+  Generates a base 64 encoded UUID without padding
+  """
+  def b64generate do
+    bingenerate() |> Base.encode64()
   end
 
   @doc """
@@ -39,5 +46,5 @@ defmodule Nerves.Hub.UUID do
     do: lower(t, acc <> <<h>>)
   defp lower(<<>>, acc),
     do: acc
-    
+
 end

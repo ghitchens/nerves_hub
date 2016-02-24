@@ -1,5 +1,5 @@
 # this module based on original hub.erl by ghitchens circa 2012
-# 
+#
 # ghitchens wrote initial erlang version as hub.erl
 # captchrisd ported to elixir hub.ex
 # ghitchens refactored from hub.ex
@@ -25,27 +25,40 @@ defmodule Nerves.Hub.OrdDictTree do
   ## manage ownership of this point
   ##
   ## TODO: un-manage?  handle errors if already manageed?   Security?
+  def manage(point \\ [], opts \\ {}, tree \\ :orddict.new)
+
   def manage([], {{from_pid, _ref}, opts}, tree) do
     :orddict.store(:mgr@, {from_pid, opts}, tree)
   end
 
-	def manage([h|t], {from, opts}, tree) do
-    {:ok, {seq, st}} = :orddict.find(h, tree)
-    stnew = manage(t, {from, opts}, st)
-    :orddict.store(h, {seq, stnew}, tree)
+  def manage([h|t], {from, opts}, tree) do
+    case :orddict.find(h, tree) do
+      :error -> nil
+      {:ok, {seq, st}} ->
+        stnew = manage(t, {from, opts}, st)
+        :orddict.store(h, {seq, stnew}, tree)
+    end
   end
+
+  def manage(point, f, tree), do: manage([point], f, tree)
 
   ## manager(Point, Tree) -> {ok, {Process, Options}} | undefined
   ##
   ## return the manageling process and options for a given point on the
   ## dictionary tree, if the manager was set by manage(...).
+  def manager(_, nil), do: nil
+
   def manager([], tree), do: :orddict.find(:mgr@, tree)
 
   def manager([h|t], tree) do
-    {:ok, {_seq, sub_tree}} = :orddict.find(h, tree)
-    manager(t, sub_tree)
+    case :orddict.find(h, tree) do
+      :error -> nil
+      {:ok, {_seq, sub_tree}} -> manager(t, sub_tree)
+    end
   end
- 
+
+  def manager(point, tree), do: manager([point], tree)
+
   ## watch(Path, Subscription, Tree)
   ##
   ## Subscription is a {From, watchParameters} tuple that is placed on
@@ -55,6 +68,7 @@ defmodule Nerves.Hub.OrdDictTree do
   ## REVIEW: could eventually be implemented as a special form of update by
   ## passing something like {append, Subscription, [notifications, false]}
   ## as the value, or maybe something like a function as the value!!! cool?
+  def watch(point \\ [], opts \\ {}, tree \\ :ordict.new)
 
   def watch([], {from, opts}, tree) do
     {from_pid, _ref} = from
@@ -112,32 +126,34 @@ defmodule Nerves.Hub.OrdDictTree do
   ## T,ST     Tree,SubTree
   ## C        Context - of the form {Seq, Whatever} where whatever is
   ##          any erlang term - gets threaded unmodified through update
+  def update(point, nil, t, c), do: update(point, [], t, c)
+
   def update([], pc, t, c) do
     uf = fn(key, value, {rc, dict}) ->
       case :orddict.find(key, dict) do
         {:ok, {_, val}} when val == value ->
           {rc, dict}
         _ when is_list(value) and (length(value) > 0) and is_tuple(hd(value)) ->
-          {rcsub, new_dict} = update(atomify(key), value, dict, c)
+          {rcsub, new_dict} = update(atomify([key]), value, dict, c)
           {(rc ++ rcsub), new_dict}
         _ ->
           {seq, _} = c
           {rc ++ [{key, value}], :orddict.store(atomify(key),
-																								{seq, value}, dict)}
+                                                {seq, value}, dict)}
       end
     end
-    {cl, tnew} = :orddict.fold(uf, {[], t}, pc)
+    {cl, tnew} = :orddict.fold(uf, {[], t}, demapify(pc))
     send_notifications(cl, tnew, c)
     {cl, tnew}
   end
 
   def update([head|tail], pc, t, c) do
     st = case :orddict.find(head, t) do
-      {:ok, {_seq, l}} when is_list(l) and (length(l) > 0) and is_tuple(hd(l)) -> 
+      {:ok, {_seq, l}} when is_list(l) and (length(l) > 0) and is_tuple(hd(l)) ->
         l
-      {:ok, _} -> 
+      {:ok, _} ->
         :orddict.new
-      :error -> 
+      :error ->
         :orddict.new
     end
     {rcsub, stnew} = update(tail, pc, st, c)
