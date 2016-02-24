@@ -25,7 +25,6 @@ defmodule Nerves.Hub.Test do
     assert {:changes, _, [foo: [this: [is_a: "map"]]]} = result
   end
 
-
   test "hub handles setting and getting arrays" do
     changes ["a", "b", "c"], int_array: [2, 3, 5], array_of_arrays: [[2],[3,4],[5,6,7]]
     changes ["d", "e", "f"], empty_array: [], array_of_strings: ["23252", "2521"]
@@ -36,9 +35,13 @@ defmodule Nerves.Hub.Test do
     nochanges ["d", "e", "f"], empty_array: [], array_of_strings: ["23252", "2521"]
   end
 
-  test "hub manages setting values to nil sets properly" do
+  test "setting to name or nil reports changes appropriately" do
     changes ["q", "r", "s"], nil_test_key: "this is a string"
+    nochanges ["q", "r", "s"], nil_test_key: "this is a string"
+    changes ["q", "r", "s"], some_test_key: :asymbol
+    nochanges ["q", "r", "s"], some_test_key: :asymbol
     changes ["q", "r", "s"], nil_test_key: nil
+    nochanges ["q", "r", "s"], nil_test_key: nil
   end
 
   test "hub handles setting and getting strings" do
