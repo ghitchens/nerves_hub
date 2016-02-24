@@ -47,7 +47,13 @@ defmodule Nerves.Hub.Server do
   def handle_call({:watch, path, opts}, from, state) do
     case Tree.watch(path, {from, opts}, state.dtree) do
       {:ok, tnew} when is_list(tnew) ->
-        {:reply, :ok, %State{state | dtree: tnew}}
+        {:reply,
+          {:ok, {
+            {state.vlock, state.gtseq},
+            handle_vlocked_deltas({:unknown, 0}, path, state)
+          }},
+          %State{state | dtree: tnew}
+        }
       {:error, reason} ->
         {:reply, {:error, reason}, state}
     end

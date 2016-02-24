@@ -63,4 +63,12 @@ defmodule Nerves.Hub.Test do
     assert resp_changes == []
 
   end
+
+  test "Hub handles watching" do
+    path = [ :some, :test, :point ]
+    Hub.update path, [ "test_data": [5, 16, "Some String"] ], []
+    dump_result = Hub.fetch path
+    {:ok, watch_result} = Hub.watch path
+    assert dump_result == watch_result
+  end
 end
