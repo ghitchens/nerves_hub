@@ -1,5 +1,7 @@
-# 2016-01-03 0.10.0-pre
+# 2016-02-24 0.10.0-pre
 
+- Changed response from Hub.watch to include current node
+- Added tests better tests for "no changes" case
 - IO.write inspect(Hub.fetch ["q", "r", "s"])
 - Renamed project to Nerves.Hub during merge to Nerves
 - cleanup of HISTORY.md (this file)
