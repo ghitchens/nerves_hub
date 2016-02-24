@@ -182,7 +182,9 @@ defmodule Nerves.Hub do
   ## Examples
   ```
   iex> Hub.watch [:some, :point]
-  :ok
+  {:ok,
+   {{"d94ccc37-4f4c-4568-b53b-40aa05c298c0", 1},
+    [test_data: [5, 16, "Some String"]]}}
   ```
   """
   def watch(path, options \\ []) do
