@@ -96,9 +96,9 @@ defmodule Nerves.Hub.Test do
   def changes(path, values) do
     {_, expected_changes} = path
       |> Enum.reverse
-      |> Enum.map_reduce values, fn(x, acc) ->
+      |> Enum.map_reduce(values, fn(x, acc) ->
         {x, [{:erlang.binary_to_atom(x, :utf8), acc}]}
-      end
+      end)
     assert {:changes, _new_ver, ^expected_changes} = Hub.update path, values
   end
 
