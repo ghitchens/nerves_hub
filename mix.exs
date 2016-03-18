@@ -1,11 +1,13 @@
 defmodule Nerves.Hub.Mixfile do
 
+  @version "0.10.1"
+
   use Mix.Project
 
   def project do
     [app: :nerves_hub,
      description: "Heirarchical key-value state store with pub-sub semantics",
-     version: version,
+     version: @version,
      elixir: "~> 1.0",
      deps: deps,
      # ExDoc
@@ -21,14 +23,9 @@ defmodule Nerves.Hub.Mixfile do
   end
 
   defp deps, do: [
+    {:nerves_lib, github: "nerves-project/nerves_lib"},
     {:earmark, "~> 0.1.19", only: :dev},
     {:ex_doc, "~> 0.10", only: :dev}
   ]
 
-  defp version do
-    case File.read("VERSION") do
-      {:ok, ver} -> String.strip ver
-      _ -> "0.0.0-dev"
-    end
-  end
  end

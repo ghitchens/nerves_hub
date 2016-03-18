@@ -5,13 +5,16 @@ defmodule Nerves.Hub.Server do
   require Logger
   require Record
 
-  alias Nerves.Hub.OrdDictTree, as: Tree  # for now
+  alias Nerves.Hub.OrdDictTree, as: Tree
+  alias Nerves.Lib.UUID
 
   defmodule State do
-    defstruct gtseq: 0, vlock: Nerves.Hub.UUID.generate, dtree: Tree.new
+    defstruct gtseq: 0, vlock: nil, dtree: nil
   end
 
-  def init(_args), do: {:ok, %State{}}
+  def init(_args) do
+    {:ok, %State{ gtseq: 0, vlock: UUID.generate, dtree: Tree.new}}
+  end
 
   def terminate(:normal, _state), do: :ok
   def terminate(reason, _state), do: reason
