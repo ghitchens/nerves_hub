@@ -99,6 +99,19 @@ defmodule Nerves.Hub.Server do
     {:reply, {{state.vlock, state.gtseq}, handle_vlocked_deltas(seq, path, state)}, state}
   end
 
+  @doc false
+  def handle_cast({:put, path, proposed}, state) do
+    seq = state.gtseq + 1
+    ctx = {seq, [from: nil, auth: []]} #REVIEW .erl 233
+    case Tree.update(path, proposed, state.dtree, ctx) do
+      {[], _} ->
+        {:noreply, state}
+      {changed, new_tree} ->
+        state = %State{state | dtree: new_tree, gtseq: seq}
+        {:noreply, state}
+    end
+  end
+
   # Breaks apart the vlock information and calls Tree.deltas with the version
   # found or since the start (version 0)
   defp handle_vlocked_deltas({cur_vlock, since}, path, state) do

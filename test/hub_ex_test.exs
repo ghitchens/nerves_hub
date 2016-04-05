@@ -113,4 +113,20 @@ defmodule Nerves.Hub.Test do
     {:ok, watch_result} = Hub.watch path
     assert dump_result == watch_result
   end
+
+  test "Get method usage" do
+    path = [ :some, :test, :point ]
+    Hub.update path, [ "test_data": [5, 16, "Some String"] ], []
+    new_result = Hub.get path
+    assert new_result == [ "test_data": [5, 16, "Some String"] ]
+    #DEPRECATED USAGE
+    dep_result = Hub.get path, :test_data
+    assert dep_result == [5, 16, "Some String"]
+  end
+
+  test "Put method" do
+    path = [ :some, :test, :point ]
+    res = Hub.put path, [ "test_data": [5, 16, "Some String"] ]
+    assert res == :ok
+  end
 end

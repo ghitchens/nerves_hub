@@ -122,11 +122,15 @@ defmodule Nerves.Hub do
   end
 
   @doc """
-  Same as `update/3` except no context argument. See
-  `update/3` for more information
+  Puts the given changes at the path and returns immediately
+
+  ## Examples
+
+      iex> Nerves.Hub.put [:some, :point], [some: :data]
+      :ok
   """
   def put(path, changes) do
-    update(path, changes)
+    GenServer.cast(Server, {:put, atomify(path), changes})
   end
 
   @doc """
@@ -250,10 +254,21 @@ defmodule Nerves.Hub do
 
   ## Examples
 
+      iex> Nerves.Hub.get [:some, :point]
+      [status: :online]
+
+      #DEPRECATED USAGE
       iex> Nerves.Hub.get [:some, :point], :status
       :online
 
   """
+
+  def get(path) do
+    {_vers, dict} = fetch(path)
+    dict
+  end
+
+  #DEPRECATED - 04/2016
   def get(path, key) do
     {_vers, dict} = fetch(path)
     Dict.get dict, key
